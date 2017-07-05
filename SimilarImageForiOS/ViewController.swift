@@ -7,7 +7,7 @@
 //
 
 import Cocoa
-
+import CoreGraphics
 
 class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     
@@ -15,17 +15,11 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     
     var selectedPath: String?
     
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
     }
 
-    override var representedObject: Any? {
-        didSet {
-        // Update the view, if already loaded.
-        }
-    }
 
     @IBOutlet var openFolder: NSButton!
     @IBAction func openFolderAction(_ sender: NSButton) {
@@ -44,6 +38,24 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     func prepareImages(url: URL) {
         selectedPath = url.path;
         getImages(url: url);
+        let image = images.first?.value
+        let originImage =  NSImage(contentsOfFile: (image?.imageArray.last)!);
+        
+       var smallImage = resize(forImage: originImage!, size: CGSize(width: 8, height: 8));
+        
+    }
+    
+    
+
+    
+    func resize(forImage image: NSImage,  size: CGSize) -> NSImage {
+        let img = NSImage(size: size)
+        img.lockFocus();
+        let ctx = NSGraphicsContext.current();
+        ctx?.imageInterpolation = .high;
+        image.draw(in: NSRect(x: 0, y: 0, width: size.width, height: size.height));
+        img.unlockFocus();
+        return img;
     }
     
     
@@ -82,6 +94,8 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
         }
         
     }
+    
+  
     
     
    
