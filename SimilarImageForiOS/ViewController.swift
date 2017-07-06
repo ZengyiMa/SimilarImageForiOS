@@ -24,9 +24,9 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     @IBOutlet var openFolder: NSButton!
     @IBAction func openFolderAction(_ sender: NSButton) {
         let panel = NSOpenPanel()
-        panel.message = "选择文件夹";
+//        panel.message = "选择文件夹";
         panel.canChooseDirectories = true;
-        panel.canChooseFiles = false;
+//        panel.canChooseFiles = false;
         panel.beginSheetModal(for: self.view.window!) { (result) in
             if result == NSModalResponseOK {
                 self.prepareImages(url: panel.urls.first!)
@@ -36,49 +36,67 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     
     
     func prepareImages(url: URL) {
-        selectedPath = url.path;
-        getImages(url: url);
-        let image = images.first?.value
-        let originImage =  NSImage(contentsOfFile: (image?.imageArray.last)!);
+//        selectedPath = url.path;
+//        getImages(url: url);
+//        let image = images.first?.value
+        let originImage =  NSImage(contentsOfFile: (url.path));
         
         var smallImage = resize(forImage: originImage!, size: CGSize(width: 8, height: 8));
+        var hash =  covertToGrey(forImage: smallImage)
         
-        covertToGrey(forImage: smallImage)
-        
+       var str = hash.2.map { (i) -> String in
+            String(i)
+            }.joined();
+        print("图片指纹 = \(str)");
     }
     
     
 
     
     func resize(forImage image: NSImage, size: CGSize) -> NSImage {
-        let img = NSImage(size: size)
+        
+        let img = NSImage(size: CGSize(width: size.width / 2, height: size.height / 2))
         img.lockFocus();
         let ctx = NSGraphicsContext.current();
         ctx?.imageInterpolation = .high;
-        image.draw(in: NSRect(x: 0, y: 0, width: size.width, height: size.height));
+        image.draw(in: NSRect(x: 0, y: 0, width: size.width / 2, height: size.height / 2));
         img.unlockFocus();
         return img;
     }
     
-    func covertToGrey(forImage image: NSImage) -> [[Float]] {
+    func covertToGrey(forImage image: NSImage) -> ([[Float]], Float, [Int]) {
         
         var imageRect = NSRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
-        var bitmap = NSBitmapImageRep(cgImage: image.cgImage(forProposedRect: &imageRect, context: nil, hints: nil)!)
-        
-        var greyArray: [[Float]] = []
-        
-        for  x in 0..<Int(image.size.width) {
-            for  y in 0..<Int(image.size.height) {
+        let bitmap = NSBitmapImageRep(cgImage: image.cgImage(forProposedRect: &imageRect, context: nil, hints: nil)!)
+        var greyArray: [[Float]] = [];
+        var totalGrey: Float = 0;
+        for  x in 0..<Int(bitmap.pixelsWide) {
+            greyArray.append([]);
+            for  y in 0..<Int(bitmap.pixelsHigh) {
                 let red = (bitmap.colorAt(x: x, y: y)?.redComponent)! * 255;
                 let green = (bitmap.colorAt(x: x, y: y)?.greenComponent)! * 255;
                 let blue = (bitmap.colorAt(x: x, y: y)?.blueComponent)! * 255;
-                // 灰度公式
-                var greyValue = red * 299/1000 + green * 587/1000 + blue * 114 / 1000;
-                greyArray[x][y] = Float(greyValue);
+                let greyValue = red * (299/1000) + green * (587/1000) + blue * (114 / 1000);
+                totalGrey += Float(greyValue);
+                greyArray[x].append(Float(greyValue))
             }
         }
         
-        return greyArray;
+        let avgGrey = totalGrey / Float(bitmap.pixelsWide * bitmap.pixelsHigh)
+        var imgHash: [Int] = [];
+        for  x in 0..<Int(greyArray.count) {
+            for  y in 0..<Int(greyArray[x].count) {
+                if greyArray[x][y] > avgGrey {
+                    imgHash.append(1);
+                } else {
+                    imgHash.append(0);
+                }
+            }
+        }
+        
+        
+        
+        return (pixelsGrey: greyArray, avgGrey: avgGrey, imgHash: imgHash);
     }
     
     
