@@ -41,14 +41,16 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
         let image = images.first?.value
         let originImage =  NSImage(contentsOfFile: (image?.imageArray.last)!);
         
-       var smallImage = resize(forImage: originImage!, size: CGSize(width: 8, height: 8));
+        var smallImage = resize(forImage: originImage!, size: CGSize(width: 8, height: 8));
+        
+        covertToGrey(forImage: smallImage)
         
     }
     
     
 
     
-    func resize(forImage image: NSImage,  size: CGSize) -> NSImage {
+    func resize(forImage image: NSImage, size: CGSize) -> NSImage {
         let img = NSImage(size: size)
         img.lockFocus();
         let ctx = NSGraphicsContext.current();
@@ -57,6 +59,28 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
         img.unlockFocus();
         return img;
     }
+    
+    func covertToGrey(forImage image: NSImage) -> [[Float]] {
+        
+        var imageRect = NSRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
+        var bitmap = NSBitmapImageRep(cgImage: image.cgImage(forProposedRect: &imageRect, context: nil, hints: nil)!)
+        
+        var greyArray: [[Float]] = []
+        
+        for  x in 0..<Int(image.size.width) {
+            for  y in 0..<Int(image.size.height) {
+                let red = (bitmap.colorAt(x: x, y: y)?.redComponent)! * 255;
+                let green = (bitmap.colorAt(x: x, y: y)?.greenComponent)! * 255;
+                let blue = (bitmap.colorAt(x: x, y: y)?.blueComponent)! * 255;
+                // 灰度公式
+                var greyValue = red * 299/1000 + green * 587/1000 + blue * 114 / 1000;
+                greyArray[x][y] = Float(greyValue);
+            }
+        }
+        
+        return greyArray;
+    }
+    
     
     
     
