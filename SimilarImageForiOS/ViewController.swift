@@ -12,7 +12,6 @@ import CoreGraphics
 class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     
     var images: Dictionary<String, Image> = [String:Image]();
-    
     var selectedPath: String?
     
     override func viewDidLoad() {
@@ -24,9 +23,8 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     @IBOutlet var openFolder: NSButton!
     @IBAction func openFolderAction(_ sender: NSButton) {
         let panel = NSOpenPanel()
-//        panel.message = "选择文件夹";
         panel.canChooseDirectories = true;
-//        panel.canChooseFiles = false;
+        panel.canChooseFiles = false;
         panel.beginSheetModal(for: self.view.window!) { (result) in
             if result == NSModalResponseOK {
                 self.prepareImages(url: panel.urls.first!)
@@ -36,23 +34,50 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
     
     
     func prepareImages(url: URL) {
-//        selectedPath = url.path;
-//        getImages(url: url);
-//        let image = images.first?.value
-        let originImage =  NSImage(contentsOfFile: (url.path));
+        selectedPath = url.path;
+        getImages(url: url);
+        for (key, image) in images {
+            let originImage =  NSImage(contentsOfFile: (image.imageArray.last!));
+            let hashMeta = covertToGrey(forImage: resize(forImage: originImage!, size: CGSize(width: 8, height: 8)))
+            images[key]?.imageHash = hashMeta.2.map { (i) -> String in
+                String(i)
+                }.joined();
+        }
         
-        var smallImage = resize(forImage: originImage!, size: CGSize(width: 8, height: 8));
-        var hash =  covertToGrey(forImage: smallImage)
+        var sameImages: Dictionary<String, [Image]> = [:]
+        for (_, image) in images {
+            var isSame = false;
+            for (imgHash, images) in sameImages {
+                if isSameImage(firstHash: image.imageHash, secondHash: imgHash) {
+                    // 是同一个图片
+                    sameImages[imgHash]?.append(image);
+                    isSame = true;
+                    break;
+                }
+            }
+            if isSame == false {
+                // 没有任何相同的，自己创建一组
+                sameImages[image.imageHash] = [image];
+            }
+        }
         
-       var str = hash.2.map { (i) -> String in
-            String(i)
-            }.joined();
-        print("图片指纹 = \(str)");
-    }
-    
-    
+        // 输出结果
+       let dict = sameImages.filter {
+            return $1.count > 1;
+        }
+        
+        _ = dict.map { (key, value) -> [Image] in
+            print("======== 相似的图片 指纹(\(key)) =========")
+            _ = value.map({ (image: Image) -> Image in
+                print("   图片地址=== \(image.imageArray.first!) 指纹(\(image.imageHash))");
+                return image
+            })
+            
 
-    
+            return value;
+        }
+    }
+
     func resize(forImage image: NSImage, size: CGSize) -> NSImage {
         
         let img = NSImage(size: CGSize(width: size.width / 2, height: size.height / 2))
@@ -93,10 +118,30 @@ class ViewController: NSViewController, NSFetchedResultsControllerDelegate {
                 }
             }
         }
-        
-        
-        
         return (pixelsGrey: greyArray, avgGrey: avgGrey, imgHash: imgHash);
+    }
+    
+    func isSameImage(firstHash hash1:String, secondHash hash2:String) -> Bool {
+        
+        if hash1.characters.count != hash2.characters.count {
+            return false;
+        }
+        
+        let thredHold: Int = 5;
+        var count: Int = 0;
+        for index in hash1.characters.indices {
+            if hash1[index] != hash2[index] {
+                count += 1;
+                if count >= thredHold {
+                    break;
+                }
+            }
+        }
+        if count >= thredHold {
+            return false
+        } else {
+            return true
+        }
     }
     
     

@@ -11,4 +11,5 @@ import Foundation
 struct Image {
     var imageUrl = ""
     var imageArray = [String]()
+    var imageHash = ""
 }
